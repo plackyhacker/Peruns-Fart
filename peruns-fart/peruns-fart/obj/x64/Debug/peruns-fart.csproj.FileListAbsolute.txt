@@ -1,0 +1,6 @@
+C:\Users\John\source\repos\Peruns-Fart\peruns-fart\peruns-fart\bin\x64\Debug\PerunsFart.exe.config
+C:\Users\John\source\repos\Peruns-Fart\peruns-fart\peruns-fart\bin\x64\Debug\PerunsFart.exe
+C:\Users\John\source\repos\Peruns-Fart\peruns-fart\peruns-fart\bin\x64\Debug\PerunsFart.pdb
+C:\Users\John\source\repos\Peruns-Fart\peruns-fart\peruns-fart\obj\x64\Debug\peruns-fart.csproj.CoreCompileInputs.cache
+C:\Users\John\source\repos\Peruns-Fart\peruns-fart\peruns-fart\obj\x64\Debug\PerunsFart.exe
+C:\Users\John\source\repos\Peruns-Fart\peruns-fart\peruns-fart\obj\x64\Debug\PerunsFart.pdb
