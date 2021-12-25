@@ -11,6 +11,10 @@ namespace PerunsFart
     {
         static void Main(string[] args)
         {
+            // enables us to debug the memory in x64dbg
+            //Console.WriteLine("Press a key to start unhooking...");
+            //Console.ReadLine();
+
             byte[] cache = null;
 
             Debug("Creating a new process to read in a clean copy of NTDLL");
@@ -73,8 +77,9 @@ namespace PerunsFart
                 Debug("[+] Done");
             }
 
-            Console.WriteLine("Press a key to end...");
-            Console.ReadLine();
+            // enables us to debug the memory in x64dbg
+            //Console.WriteLine("Press a key to end app...");
+            //Console.ReadLine();
         }
 
         static bool UnhookDLL(byte[] cleanModule, IntPtr dirtyModuleBaseAddress)
