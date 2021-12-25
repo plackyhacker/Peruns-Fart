@@ -141,7 +141,7 @@ namespace PerunsFart
                     Debug("[+] VirtualProtect Dll to PAGE_EXECUTE_READWRITE...");
                     bool result = VirtualProtect(IntPtr.Add(dirtyModuleBaseAddress, startOffset), (UIntPtr)cleanSyscalls.Length, (UInt32)AllocationProtectEnum.PAGE_EXECUTE_READWRITE, out UInt32 lpflOldProtect);
 
-                    // TODO: copy over the hooked ntdll
+                    // copy over the hooked ntdll
                     Debug("[+] Unhooking Dll by copying clean data...");
                     try
                     {
