@@ -58,4 +58,10 @@ I have not injected any shellcode in the PoC. The technique achieves the same re
 
 # Notes
 
-The code can be changed to unhook any loaded DLL. BitDefender hooks **ntdll.dll** and **kernelbase.dll**. If I get time I might update the code to unhook both of these, at the moment the PoC only unhooks **ntdll.dll**.
+~~The code can be changed to unhook any loaded DLL~~. BitDefender hooks **ntdll.dll** and **kernelbase.dll**.
+
+Upon loading the suspended process I used Process Hacker to see which modules had been loaded and unfortunately only **ntdll.dll** is loaded (this makes sense in hindsight):
+
+![Suspended](https://github.com/plackyhacker/Peruns-Fart/blob/main/suspended.png?raw=true)
+
+Still, it could be used in conjunction with [direct system calls](https://github.com/plackyhacker/Sys-Calls) to ntdll.
